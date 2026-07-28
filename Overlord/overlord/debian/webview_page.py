@@ -20,17 +20,8 @@ class WebViewPage(QWebEnginePage):
         logger.warning("Ignoring SSL certificate error for: %s", certificateError.url().toString())
         return True
 
-    def acceptNavigationRequest(self, url, navigation_type, is_main_frame):
-        if url.toString().lower().endswith(".pdf"):
-            logger.debug("Intercepting PDF navigation to: %s", url.toString())
-            self.setUrl(url)
-            return False
-        return super().acceptNavigationRequest(url, navigation_type, is_main_frame)
-
     def createWindow(self, window_type):
-        new_page = WebViewPage(self.profile(), self.view())
-        self.view().setPage(new_page)
-        return new_page
+        return self
 
 
 class WebviewPage(QWidget):

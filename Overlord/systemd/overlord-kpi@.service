@@ -1,0 +1,17 @@
+[Unit]
+Description=Overlord KPI Display
+After=graphical.target display-manager.service
+Wants=graphical.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=%h/.Xauthority
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=%h/.cache/dbus/session-bus
+ExecStart=/opt/overlord-kpi/launch.sh --auto
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

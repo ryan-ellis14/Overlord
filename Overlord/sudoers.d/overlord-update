@@ -1,0 +1,11 @@
+# Allow the Overlord kiosk user to start the self-update system service
+# without a password prompt. Installed by install-debian.sh to
+# /etc/sudoers.d/overlord-update (mode 0440).
+#
+# The kiosk user may ONLY start (not stop/restart/enable) the templated
+# overlord-update@<self>.service unit. The service itself runs as root and
+# does the git pull + reinstall + service restart.
+#
+# Replace OVERLORD_USER below with the actual kiosk username at install time
+# (install-debian.sh does this substitution).
+OVERLORD_USER ALL=(root) NOPASSWD: /usr/bin/systemctl start overlord-update@*

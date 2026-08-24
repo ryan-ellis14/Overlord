@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QLineEdit,
     QComboBox,
+    QCheckBox,
     QFrame,
     QScrollArea,
     QWidget,
@@ -16,6 +17,7 @@ from PyQt6.QtWidgets import (
 )
 
 from ..config import (
+    APP_VERSION,
     MAX_URLS,
     DEFAULT_URLS,
     GESTURE_TYPES,
@@ -112,10 +114,12 @@ SECTION_TITLE_STYLE = "color: #4a90d9; font-size: 16px; font-weight: bold;"
 class SettingsWindow(QDialog):
 
     settings_applied = pyqtSignal()
+    update_requested = pyqtSignal()
 
-    def __init__(self, pin_manager: PinManager, parent=None):
+    def __init__(self, pin_manager: PinManager, update_info=None, parent=None):
         super().__init__(parent)
         self._pin_manager = pin_manager
+        self._update_info = update_info
         self._url_entries: list[QLineEdit] = []
         self._setup_ui()
 
@@ -141,6 +145,7 @@ class SettingsWindow(QDialog):
         main_layout.addWidget(self._create_pin_section())
         main_layout.addWidget(self._create_url_section())
         main_layout.addWidget(self._create_gesture_section())
+        main_layout.addWidget(self._create_update_section())
         main_layout.addStretch(1)
 
         main_layout.addWidget(self._create_action_buttons())
@@ -350,6 +355,76 @@ class SettingsWindow(QDialog):
 
         return frame
 
+    def _create_update_section(self):
+        frame, layout = self._create_section_frame("Application Update")
+
+        info = self._update_info
+        available = info is not None and info.available
+
+        current_version = APP_VERSION
+        latest_version = info.remote_version if info else "unknown"
+        local_sha = info.short_local_sha() if info else "unknown"
+        remote_sha = info.short_remote_sha() if info else "unknown"
+
+        version_row = QHBoxLayout()
+        version_row.setSpacing(8)
+
+        current_lbl = QLabel(
+            f"<b>Current:</b> {current_version} ({local_sha})"
+        )
+        current_lbl.setStyleSheet("color: #ddd; font-size: 13px;")
+        version_row.addWidget(current_lbl)
+        version_row.addStretch()
+
+        latest_lbl = QLabel(
+            f"<b>Latest:</b> {latest_version} ({remote_sha})"
+        )
+        latest_lbl.setStyleSheet("color: #ddd; font-size: 13px;")
+        version_row.addWidget(latest_lbl)
+        layout.addLayout(version_row)
+
+        auto_toggle = QCheckBox("Auto-apply updates (no PIN prompt)")
+        auto_toggle.setChecked(self._pin_manager.get_auto_update_enabled())
+        auto_toggle.setStyleSheet("color: #ddd; font-size: 13px; spacing: 8px;")
+        layout.addWidget(auto_toggle)
+        self._auto_update_checkbox = auto_toggle
+
+        status_lbl = QLabel()
+        status_lbl.setStyleSheet("color: #888; font-size: 12px;")
+        if available:
+            status_lbl.setText("An update is available. Click below to install now.")
+            status_lbl.setStyleSheet("color: #ffd966; font-size: 12px;")
+        else:
+            status_lbl.setText("Overlord is up to date.")
+        layout.addWidget(status_lbl)
+
+        update_btn = QPushButton("Update Overlord Now")
+        update_btn.setStyleSheet(BUTTON_STYLE)
+        update_btn.setEnabled(available)
+        update_btn.clicked.connect(self._on_update_now)
+        layout.addWidget(update_btn)
+
+        return frame
+
+    def _on_update_now(self):
+        reply = QMessageBox.question(
+            self,
+            "Update Overlord",
+            "Overlord will be updated and the kiosk will restart.\n\nContinue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+        self._save_auto_update_pref()
+        self.update_requested.emit()
+        self.accept()
+
+    def _save_auto_update_pref(self):
+        enabled = self._auto_update_checkbox.isChecked()
+        self._pin_manager.save_auto_update_enabled(enabled)
+        logger.info("Auto-update preference saved: %s", enabled)
+
     def _create_action_buttons(self):
         row = QHBoxLayout()
         row.setSpacing(12)
@@ -395,6 +470,7 @@ class SettingsWindow(QDialog):
         self._pin_manager.save_urls(urls)
         gesture = self._gesture_combo.currentData()
         self._pin_manager.save_gesture_type(gesture)
+        self._save_auto_update_pref()
 
         self.settings_applied.emit()
         self.accept()

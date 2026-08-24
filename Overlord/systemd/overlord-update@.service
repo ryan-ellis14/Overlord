@@ -1,0 +1,19 @@
+[Unit]
+Description=Overlord Self-Update Service (user=%i)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/opt/overlord-repo/.git
+
+[Service]
+Type=oneshot
+ExecStart=/opt/overlord-repo/Overlord/update.sh %i
+User=root
+StandardOutput=append:/tmp/overlord-update.log
+StandardError=append:/tmp/overlord-update.log
+TimeoutStartSec=600
+
+# Prevent overlapping runs
+Restart=no
+
+[Install]
+WantedBy=multi-user.target

@@ -11,7 +11,7 @@ Environment=XAUTHORITY=%h/.Xauthority
 Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=%h/.cache/dbus/session-bus
 Environment=QT_QPA_PLATFORM=xcb
 ExecStart=/opt/overlord/launch.sh
-Restart=on-failure
+Restart=always
 RestartSec=5
 
 [Install]

@@ -3,6 +3,9 @@ set -e
 
 INSTALL_DIR="/opt/overlord"
 VENV_DIR="$INSTALL_DIR/venv"
+REPO_DIR="/opt/overlord-repo"
+REPO_URL="https://github.com/ryan-ellis14/Overlord.git"
+BRANCH="main"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -17,23 +20,43 @@ if [ "$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-echo -e "${YELLOW}[1/5] Installing system packages...${NC}"
+echo -e "${YELLOW}[1/7] Installing system packages...${NC}"
 apt-get update -qq 2>&1 | grep -v "NO_PUBKEY\|W: GPG\|The following signatures\|InRelease" || true
-apt-get install -y -qq python3-full python3-venv xvfb xdg-utils dbus-x11 libxcb-cursor0 libxcb-xinerama0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxkbcommon-x11-0 libdbus-1-3 2>/dev/null
+apt-get install -y -qq git python3-full python3-venv xvfb xdg-utils dbus-x11 \
+    libxcb-cursor0 libxcb-xinerama0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+    libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxkbcommon-x11-0 libdbus-1-3 \
+    2>/dev/null
 
-echo -e "${YELLOW}[2/5] Setting up install directory...${NC}"
+echo -e "${YELLOW}[2/7] Cloning/updating source repository...${NC}"
+if [ -d "$REPO_DIR/.git" ]; then
+    cd "$REPO_DIR"
+    git fetch origin "$BRANCH" -q
+    git reset --hard "origin/$BRANCH" -q
+    echo -e "  ${GREEN}Source repository updated${NC}"
+else
+    rm -rf "$REPO_DIR"
+    git clone --branch "$BRANCH" --depth 1 "$REPO_URL" "$REPO_DIR" -q
+    echo -e "  ${GREEN}Source repository cloned to $REPO_DIR${NC}"
+fi
+chmod -R a+rX "$REPO_DIR"
+git config --system --add safe.directory "$REPO_DIR" 2>/dev/null || true
+
+SRC_DIR="$REPO_DIR/Overlord"
+
+echo -e "${YELLOW}[3/7] Setting up install directory...${NC}"
 mkdir -p "$INSTALL_DIR"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-cp -r "$SCRIPT_DIR/overlord" "$INSTALL_DIR/"
-cp "$SCRIPT_DIR/run_overlord_debian.py" "$INSTALL_DIR/run_overlord.py"
-cp "$SCRIPT_DIR/requirements-debian.txt" "$INSTALL_DIR/requirements.txt"
+cp -r "$SRC_DIR/overlord" "$INSTALL_DIR/"
+cp "$SRC_DIR/run_overlord_debian.py" "$INSTALL_DIR/run_overlord.py"
+cp "$SRC_DIR/requirements-debian.txt" "$INSTALL_DIR/requirements.txt"
+cp "$SRC_DIR/update.sh" "$INSTALL_DIR/update.sh" 2>/dev/null || true
+chmod +x "$INSTALL_DIR/update.sh" 2>/dev/null || true
 
-echo -e "${YELLOW}[3/5] Creating virtual environment and installing dependencies...${NC}"
+echo -e "${YELLOW}[4/7] Creating virtual environment and installing dependencies...${NC}"
 python3 -m venv "$VENV_DIR"
 "$VENV_DIR/bin/pip" install --upgrade pip -q
 "$VENV_DIR/bin/pip" install -r "$INSTALL_DIR/requirements.txt" -q
 
-echo -e "${YELLOW}[4/5] Creating launch script...${NC}"
+echo -e "${YELLOW}[5/7] Creating launch script...${NC}"
 cat > "$INSTALL_DIR/launch.sh" << 'LAUNCH_EOF'
 #!/bin/bash
 source /opt/overlord/venv/bin/activate
@@ -42,13 +65,13 @@ exec python3 /opt/overlord/run_overlord.py "$@"
 LAUNCH_EOF
 chmod +x "$INSTALL_DIR/launch.sh"
 
-echo -e "${YELLOW}[5/5] Installing systemd user service and enabling auto-start...${NC}"
+echo -e "${YELLOW}[6/7] Installing systemd user service and enabling auto-start...${NC}"
 CURRENT_USER="${SUDO_USER:-$USER}"
 CURRENT_UID=$(id -u "$CURRENT_USER")
 SERVICE_FILE="/etc/systemd/user/overlord@.service"
 
 mkdir -p /etc/systemd/user
-cp "$SCRIPT_DIR/systemd/overlord-debian@.service" "$SERVICE_FILE"
+cp "$SRC_DIR/systemd/overlord-debian@.service" "$SERVICE_FILE"
 chmod 644 "$SERVICE_FILE"
 
 mkdir -p "/home/$CURRENT_USER/.config/systemd/user/default.target.wants"
@@ -100,6 +123,24 @@ chmod +x "$DESKTOP_FILE"
 chown "$CURRENT_USER:$CURRENT_USER" "$DESKTOP_FILE"
 echo -e "  ${GREEN}Desktop shortcut created${NC}"
 
+echo -e "${YELLOW}[7/7] Installing self-update service...${NC}"
+UPDATE_SERVICE="/etc/systemd/system/overlord-update@.service"
+cp "$SRC_DIR/systemd/overlord-update@.service" "$UPDATE_SERVICE"
+chmod 644 "$UPDATE_SERVICE"
+systemctl daemon-reload 2>/dev/null || true
+echo -e "  ${GREEN}Self-update system service installed${NC}"
+
+SUDOERS_SRC="$SRC_DIR/sudoers.d/overlord-update"
+SUDOERS_DST="/etc/sudoers.d/overlord-update"
+if [ -f "$SUDOERS_SRC" ]; then
+    sed "s/OVERLORD_USER/$CURRENT_USER/g" "$SUDOERS_SRC" > "$SUDOERS_DST"
+    chmod 440 "$SUDOERS_DST"
+    visudo -cf "$SUDOERS_DST" >/dev/null
+    echo -e "  ${GREEN}Sudoers rule installed for user '$CURRENT_USER'${NC}"
+else
+    echo -e "  ${YELLOW}sudoers source file missing - self-update will require manual sudo${NC}"
+fi
+
 echo ""
 echo -e "${GREEN}=== Setup Complete ===${NC}"
 echo ""
@@ -108,6 +149,10 @@ echo "After reboot, the login screen will be skipped and Overlord launches fulls
 echo ""
 echo "To run now without rebooting:"
 echo -e "  ${YELLOW}/opt/overlord/launch.sh${NC}"
+echo ""
+echo "Self-update: an 'Update Available' indicator appears on the bottom bar"
+echo "when new commits are pushed to GitHub. Enter the 9999 PIN to access"
+echo "the update controls."
 echo ""
 echo "Default PINs:"
 echo "  Exit app:        1234"

@@ -16,6 +16,7 @@ from .config import (
     GESTURE_CORNER_DOUBLE_TAP,
     PREF_URLS,
     DEFAULT_URLS,
+    PREF_AUTO_UPDATE,
 )
 
 logger = logging.getLogger("overlord")
@@ -67,6 +68,8 @@ class PinManager:
             self._config[PREF_GESTURE_TYPE] = GESTURE_CORNER_DOUBLE_TAP
         if PREF_URLS not in self._config:
             self._config[PREF_URLS] = DEFAULT_URLS
+        if PREF_AUTO_UPDATE not in self._config:
+            self._config[PREF_AUTO_UPDATE] = False
         self._save_config()
 
     def _encrypt_pin(self, pin: str) -> str:
@@ -131,4 +134,11 @@ class PinManager:
 
     def save_gesture_type(self, gesture_type: str):
         self._config[PREF_GESTURE_TYPE] = gesture_type
+        self._save_config()
+
+    def get_auto_update_enabled(self) -> bool:
+        return bool(self._config.get(PREF_AUTO_UPDATE, False))
+
+    def save_auto_update_enabled(self, enabled: bool):
+        self._config[PREF_AUTO_UPDATE] = bool(enabled)
         self._save_config()

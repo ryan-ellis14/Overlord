@@ -41,5 +41,24 @@ GESTURE_LABELS = {
 
 PREF_GESTURE_TYPE = "gesture_type"
 PREF_URLS = "multiview_urls"
+PREF_AUTO_UPDATE = "auto_update_enabled"
 
 SWIPE_THRESHOLD = 50
+
+GITHUB_OWNER = "ryan-ellis14"
+GITHUB_REPO = "Overlord"
+UPDATE_BRANCH = "main"
+UPDATE_CHECK_INTERVAL_MS = 10 * 60 * 1000
+UPDATE_CHECK_TIMEOUT_S = 15
+
+GITHUB_API_COMMIT_URL = (
+    f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/commits/{UPDATE_BRANCH}"
+)
+GITHUB_RAW_CONFIG_URL = (
+    f"https://raw.githubusercontent.com/{GITHUB_OWNER}/{GITHUB_REPO}/{UPDATE_BRANCH}"
+    f"/Overlord/overlord/config.py"
+)
+
+SOURCE_REPO_DIR = "/opt/overlord-repo"
+INSTALL_DIR = "/opt/overlord"
+UPDATE_SERVICE_TEMPLATE = "overlord-update@.service"

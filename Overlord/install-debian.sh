@@ -19,7 +19,7 @@ fi
 
 echo -e "${YELLOW}[1/5] Installing system packages...${NC}"
 apt-get update -qq 2>&1 | grep -v "NO_PUBKEY\|W: GPG\|The following signatures\|InRelease" || true
-apt-get install -y -qq python3-full python3-venv xvfb xdg-utils dbus-x11 2>/dev/null
+apt-get install -y -qq python3-full python3-venv xvfb xdg-utils dbus-x11 libxcb-cursor0 libxcb-xinerama0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxkbcommon-x11-0 libdbus-1-3 2>/dev/null
 
 echo -e "${YELLOW}[2/5] Setting up install directory...${NC}"
 mkdir -p "$INSTALL_DIR"

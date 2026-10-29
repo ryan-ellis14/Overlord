@@ -173,7 +173,8 @@ class SettingsWindow(QDialog):
         frame, layout = self._create_section_frame("PIN Management")
 
         for pin_name, attr_name in [
-            ("Exit PIN", "get_exit_pin"),
+            ("Restart PIN", "get_exit_pin"),
+            ("Stop PIN", "get_shutdown_pin"),
             ("Device Settings PIN", "get_settings_pin"),
             ("Kiosk Settings PIN", "get_kiosk_settings_pin"),
         ]:
@@ -225,8 +226,10 @@ class SettingsWindow(QDialog):
             QMessageBox.warning(self, "Error", "New PINs do not match.")
             return
 
-        if pin_name == "Exit PIN":
+        if pin_name == "Restart PIN":
             self._pin_manager.save_exit_pin(new_pin)
+        elif pin_name == "Stop PIN":
+            self._pin_manager.save_shutdown_pin(new_pin)
         elif pin_name == "Device Settings PIN":
             self._pin_manager.save_settings_pin(new_pin)
         elif pin_name == "Kiosk Settings PIN":

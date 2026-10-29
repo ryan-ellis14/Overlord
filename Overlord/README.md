@@ -72,7 +72,8 @@ A gesture unlocks the PIN dialog. Three modes available (configurable):
 
 | Action | PIN |
 |---|---|
-| Exit application | `1234` |
+| Restart application | `1234` |
+| Stop application (stops the systemd service) | `2580` |
 | Open device settings | `5678` |
 | Open kiosk settings | `9999` |
 

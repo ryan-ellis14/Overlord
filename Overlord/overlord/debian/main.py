@@ -118,8 +118,6 @@ class MainKioskWindow(QMainWindow):
 
         self._main_layout.addWidget(self._stacked_widget, 1)
 
-        self._update_page_indicator()
-
     def _setup_bottom_bar(self):
         bar = QWidget()
         bar.setFixedHeight(48)
@@ -159,6 +157,8 @@ class MainKioskWindow(QMainWindow):
         bar_layout.addWidget(self._btn_next, 0, 3)
 
         self._main_layout.addWidget(bar)
+
+        self._update_page_indicator()
 
     def _setup_update_checker(self):
         self._update_checker = UpdateChecker(self)
@@ -263,12 +263,14 @@ class MainKioskWindow(QMainWindow):
             return
 
         self._pin_dialog = PinDialog(
-            exit_pin=self._pin_manager.get_exit_pin(),
+            restart_pin=self._pin_manager.get_exit_pin(),
+            shutdown_pin=self._pin_manager.get_shutdown_pin(),
             settings_pin=self._pin_manager.get_settings_pin(),
             kiosk_settings_pin=self._pin_manager.get_kiosk_settings_pin(),
             parent=self,
         )
-        self._pin_dialog.exit_requested.connect(self._exit_app)
+        self._pin_dialog.restart_requested.connect(self._restart_app)
+        self._pin_dialog.shutdown_requested.connect(self._shutdown_app)
         self._pin_dialog.settings_requested.connect(self._open_settings)
         self._pin_dialog.kiosk_settings_requested.connect(self._open_kiosk_settings)
         self._pin_dialog.finished.connect(self._on_pin_dialog_finished)
@@ -277,8 +279,22 @@ class MainKioskWindow(QMainWindow):
     def _on_pin_dialog_finished(self, result):
         self._pin_dialog = None
 
-    def _exit_app(self):
-        logger.info("Exit requested via PIN")
+    def _restart_app(self):
+        logger.info("Restart requested via PIN")
+        QApplication.quit()
+
+    def _shutdown_app(self):
+        logger.info("Stop requested via PIN; stopping overlord service")
+        username = self._get_username()
+        try:
+            subprocess.run(
+                ["systemctl", "--user", "stop", f"overlord@{username}"],
+                check=False,
+                capture_output=True,
+                timeout=5,
+            )
+        except Exception as e:
+            logger.warning("Failed to stop overlord service: %s", e)
         QApplication.quit()
 
     def _open_settings(self):

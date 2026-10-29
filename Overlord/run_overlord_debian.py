@@ -33,7 +33,6 @@ def main():
     logger.info("Starting %s (Debian variant)", APP_NAME)
 
     splash = SplashWindow()
-    splash.show()
 
     kiosk_window = None
     settings_window = None
@@ -41,7 +40,12 @@ def main():
 
     def launch_kiosk():
         nonlocal kiosk_window
+        if kiosk_window is not None:
+            return
         splash.close()
+        if not pin_manager.is_setup_complete():
+            pin_manager.save_setup_complete(True)
+            logger.info("First launch complete; future starts will skip splash")
         kiosk_window = MainKioskWindow()
         kiosk_window.show()
         logger.info("Kiosk window shown")
@@ -56,7 +60,13 @@ def main():
 
     splash._btn_launch.clicked.connect(launch_kiosk)
     splash._btn_settings.clicked.connect(open_settings)
-    splash.auto_launch_after(500)
+
+    if pin_manager.is_setup_complete():
+        logger.info("Setup complete; skipping splash and launching kiosk")
+        launch_kiosk()
+    else:
+        splash.show()
+        splash.auto_launch_after(500)
 
     sys.exit(app.exec())
 

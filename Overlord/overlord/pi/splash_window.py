@@ -55,6 +55,7 @@ class SplashWindow(Gtk.Window):
 
     def __init__(self):
         super().__init__(title=APP_NAME)
+        self._on_launch = None
         self.set_decorated(False)
         self.set_default_size(500, 300)
         self.set_position(Gtk.WindowPosition.CENTER)
@@ -113,4 +114,9 @@ class SplashWindow(Gtk.Window):
         self.add(bg)
 
     def auto_launch_after(self, ms=500):
-        pass
+        def _fire():
+            if self._on_launch is not None:
+                logger.info("Auto-launching kiosk browser")
+                self._on_launch()
+            return False
+        GLib.timeout_add(ms, _fire)

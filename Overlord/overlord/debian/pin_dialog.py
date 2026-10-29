@@ -87,13 +87,15 @@ CANCEL_BUTTON_STYLE = """
 
 class PinDialog(QDialog):
 
-    exit_requested = pyqtSignal()
+    restart_requested = pyqtSignal()
+    shutdown_requested = pyqtSignal()
     settings_requested = pyqtSignal()
     kiosk_settings_requested = pyqtSignal()
 
-    def __init__(self, exit_pin: str, settings_pin: str, kiosk_settings_pin: str, parent=None):
+    def __init__(self, restart_pin: str, shutdown_pin: str, settings_pin: str, kiosk_settings_pin: str, parent=None):
         super().__init__(parent)
-        self._exit_pin = exit_pin
+        self._restart_pin = restart_pin
+        self._shutdown_pin = shutdown_pin
         self._settings_pin = settings_pin
         self._kiosk_settings_pin = kiosk_settings_pin
         self._current_entry = ""
@@ -215,10 +217,14 @@ class PinDialog(QDialog):
 
     def _check_pin(self):
         pin = self._current_entry
-        if pin == self._exit_pin:
-            logger.debug("Exit PIN correct")
+        if pin == self._restart_pin:
+            logger.debug("Restart PIN correct")
             self.accept()
-            self.exit_requested.emit()
+            self.restart_requested.emit()
+        elif pin == self._shutdown_pin:
+            logger.debug("Shutdown PIN correct")
+            self.accept()
+            self.shutdown_requested.emit()
         elif pin == self._settings_pin:
             logger.debug("Settings PIN correct")
             self.accept()

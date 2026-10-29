@@ -4,6 +4,7 @@ gi.require_version('WebKit2', '4.1')
 from gi.repository import Gtk, Gdk, GLib, WebKit2
 
 import logging
+import os
 import time
 
 from ..config import (
@@ -139,11 +140,13 @@ class MainKioskWindow(Gtk.Window):
             return
 
         self._pin_dialog = PinDialog(
-            exit_pin=self._pin_manager.get_exit_pin(),
+            restart_pin=self._pin_manager.get_exit_pin(),
+            shutdown_pin=self._pin_manager.get_shutdown_pin(),
             settings_pin=self._pin_manager.get_settings_pin(),
             kiosk_settings_pin=self._pin_manager.get_kiosk_settings_pin(),
         )
-        self._pin_dialog.connect("exit-requested", lambda w: self._exit_app())
+        self._pin_dialog.connect("restart-requested", lambda w: self._restart_app())
+        self._pin_dialog.connect("shutdown-requested", lambda w: self._shutdown_app())
         self._pin_dialog.connect("settings-requested", lambda w: self._open_settings())
         self._pin_dialog.connect("kiosk-settings-requested", lambda w: self._open_kiosk_settings())
         self._pin_dialog.connect("destroy", self._on_pin_dialog_destroyed)
@@ -151,8 +154,21 @@ class MainKioskWindow(Gtk.Window):
     def _on_pin_dialog_destroyed(self, widget):
         self._pin_dialog = None
 
-    def _exit_app(self):
-        logger.info("Exit requested via PIN")
+    def _restart_app(self):
+        logger.info("Restart requested via PIN")
+        Gtk.main_quit()
+
+    def _shutdown_app(self):
+        logger.info("Stop requested via PIN; stopping overlord service")
+        import subprocess
+        username = os.environ.get("USER") or os.environ.get("LOGNAME") or "overlord"
+        try:
+            subprocess.run(
+                ["systemctl", "--user", "stop", f"overlord@{username}"],
+                check=False, capture_output=True, timeout=5,
+            )
+        except Exception as e:
+            logger.warning("Failed to stop overlord service: %s", e)
         Gtk.main_quit()
 
     def _open_settings(self):

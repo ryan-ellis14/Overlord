@@ -12,11 +12,13 @@ from .config import (
     DEFAULT_EXIT_PIN,
     DEFAULT_SETTINGS_PIN,
     DEFAULT_KIOSK_SETTINGS_PIN,
+    DEFAULT_SHUTDOWN_PIN,
     PREF_GESTURE_TYPE,
     GESTURE_CORNER_DOUBLE_TAP,
     PREF_URLS,
     DEFAULT_URLS,
     PREF_AUTO_UPDATE,
+    PREF_SETUP_COMPLETE,
 )
 
 logger = logging.getLogger("overlord")
@@ -64,12 +66,17 @@ class PinManager:
         if "kiosk_settings_pin" not in self._config:
             self._config["kiosk_settings_pin"] = self._encrypt_pin(DEFAULT_KIOSK_SETTINGS_PIN)
             logger.debug("Set default kiosk settings PIN")
+        if "shutdown_pin" not in self._config:
+            self._config["shutdown_pin"] = self._encrypt_pin(DEFAULT_SHUTDOWN_PIN)
+            logger.debug("Set default shutdown PIN")
         if PREF_GESTURE_TYPE not in self._config:
             self._config[PREF_GESTURE_TYPE] = GESTURE_CORNER_DOUBLE_TAP
         if PREF_URLS not in self._config:
             self._config[PREF_URLS] = DEFAULT_URLS
         if PREF_AUTO_UPDATE not in self._config:
             self._config[PREF_AUTO_UPDATE] = False
+        if PREF_SETUP_COMPLETE not in self._config:
+            self._config[PREF_SETUP_COMPLETE] = False
         self._save_config()
 
     def _encrypt_pin(self, pin: str) -> str:
@@ -92,7 +99,7 @@ class PinManager:
     def get_exit_pin(self) -> str:
         pin = self._decrypt_pin(self._config.get("exit_pin", ""))
         if pin is None:
-            logger.warning("Exit PIN not found, using default")
+            logger.warning("Restart PIN not found, using default")
             return DEFAULT_EXIT_PIN
         return pin
 
@@ -110,6 +117,13 @@ class PinManager:
             return DEFAULT_KIOSK_SETTINGS_PIN
         return pin
 
+    def get_shutdown_pin(self) -> str:
+        pin = self._decrypt_pin(self._config.get("shutdown_pin", ""))
+        if pin is None:
+            logger.warning("Shutdown PIN not found, using default")
+            return DEFAULT_SHUTDOWN_PIN
+        return pin
+
     def save_exit_pin(self, pin: str):
         self._config["exit_pin"] = self._encrypt_pin(pin)
         self._save_config()
@@ -120,6 +134,17 @@ class PinManager:
 
     def save_kiosk_settings_pin(self, pin: str):
         self._config["kiosk_settings_pin"] = self._encrypt_pin(pin)
+        self._save_config()
+
+    def save_shutdown_pin(self, pin: str):
+        self._config["shutdown_pin"] = self._encrypt_pin(pin)
+        self._save_config()
+
+    def is_setup_complete(self) -> bool:
+        return bool(self._config.get(PREF_SETUP_COMPLETE, False))
+
+    def save_setup_complete(self, complete: bool):
+        self._config[PREF_SETUP_COMPLETE] = bool(complete)
         self._save_config()
 
     def get_urls(self) -> list[str]:

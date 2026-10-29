@@ -58,14 +58,16 @@ class PinDialog(Gtk.Window):
     __gtype_name__ = "PinDialog"
 
     __gsignals__ = {
-        "exit-requested": (GObject.SignalFlags.RUN_FIRST, None, ()),
+        "restart-requested": (GObject.SignalFlags.RUN_FIRST, None, ()),
+        "shutdown-requested": (GObject.SignalFlags.RUN_FIRST, None, ()),
         "settings-requested": (GObject.SignalFlags.RUN_FIRST, None, ()),
         "kiosk-settings-requested": (GObject.SignalFlags.RUN_FIRST, None, ()),
     }
 
-    def __init__(self, exit_pin, settings_pin, kiosk_settings_pin):
+    def __init__(self, restart_pin, shutdown_pin, settings_pin, kiosk_settings_pin):
         super().__init__(type=Gtk.WindowType.POPUP)
-        self._exit_pin = exit_pin
+        self._restart_pin = restart_pin
+        self._shutdown_pin = shutdown_pin
         self._settings_pin = settings_pin
         self._kiosk_settings_pin = kiosk_settings_pin
         self._current_entry = ""
@@ -204,9 +206,13 @@ class PinDialog(Gtk.Window):
 
     def _check_pin(self):
         pin = self._current_entry
-        if pin == self._exit_pin:
-            logger.debug("Exit PIN correct")
-            self.emit("exit-requested")
+        if pin == self._restart_pin:
+            logger.debug("Restart PIN correct")
+            self.emit("restart-requested")
+            self.destroy()
+        elif pin == self._shutdown_pin:
+            logger.debug("Shutdown PIN correct")
+            self.emit("shutdown-requested")
             self.destroy()
         elif pin == self._settings_pin:
             logger.debug("Settings PIN correct")

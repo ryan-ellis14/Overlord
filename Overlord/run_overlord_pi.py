@@ -32,13 +32,17 @@ def main():
     pin_manager = PinManager()
 
     splash = SplashWindow()
-    splash.show_all()
 
     kiosk_window = None
 
     def launch_kiosk():
         nonlocal kiosk_window
+        if kiosk_window is not None:
+            return
         splash.destroy()
+        if not pin_manager.is_setup_complete():
+            pin_manager.save_setup_complete(True)
+            logger.info("First launch complete; future starts will skip splash")
         kiosk_window = MainKioskWindow()
         kiosk_window.show_all()
         logger.info("Kiosk window shown")
@@ -53,7 +57,13 @@ def main():
     splash._on_launch = launch_kiosk
     splash._btn_launch.connect("clicked", lambda w: launch_kiosk())
     splash._btn_settings.connect("clicked", lambda w: open_settings())
-    splash.auto_launch_after(500)
+
+    if pin_manager.is_setup_complete():
+        logger.info("Setup complete; skipping splash and launching kiosk")
+        launch_kiosk()
+    else:
+        splash.show_all()
+        splash.auto_launch_after(500)
 
     Gtk.main()
 

@@ -117,7 +117,8 @@ class SplashWindow(QWidget):
         self._do_launch()
 
     def _do_launch(self):
-        logger.info("Launching kiosk browser")
+        logger.info("Auto-launching kiosk browser")
+        self._btn_launch.click()
 
     def showEvent(self, event):
         super().showEvent(event)
